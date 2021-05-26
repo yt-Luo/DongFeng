@@ -8,25 +8,33 @@ import smtplib
 import datetime
 
 #讀excel
-def load_data(file_name):
-    df_orderData = pd.read_excel(file_name)
+def load_data(file_name, sheet_num=0):
+    df_orderData = pd.read_excel(file_name, sheet_name = sheet_num)
     df_data = pd.DataFrame(df_orderData,columns=['OEB01','OEB03','OEB15','OEB16','OEA02','OEA14'])
-    df_data["pk"] = df_data["OEB01"] + "_" + df_data["OEB03"].map(str)
+    df_data["pk"] = df_data["OEB01"] + "_" + df_data["OEB03"].map(str) # pk(不能重複) = 訂單編號 + 項次
     return df_data
 
 # 資料處理
 def data_process(df, df1):
+    # 找昨天跟今天所有不重複的資料(含交期更改前後pk相同的訂單)
     tmp = df.append(df1)
     tmp.drop_duplicates(keep=False, inplace=True)
-    all_diff =pd.DataFrame(tmp)
+    all_diff =pd.DataFrame(tmp) 
 
-    last = all_diff.drop_duplicates(subset=['pk'],keep='last')
-    first = all_diff.drop_duplicates(subset=['pk'],keep='first')
-    pk_diff = all_diff.drop_duplicates(subset=['pk'],keep=False)
+    # 找昨天跟今天所有pk不重複的資料
+    last = all_diff.drop_duplicates(subset=['pk'],keep='last') # 含交期更改後的訂單，不含交期更改前的訂單
+    first = all_diff.drop_duplicates(subset=['pk'],keep='first') # 含交期更改前的訂單，不含交期更改後的訂單
+    pk_diff = all_diff.drop_duplicates(subset=['pk'],keep=False) # 不含交期被更改過的所有訂單
+    
+    # 當兩天的資料相等時，回傳None
+    if first.equals(last):
+        return None
 
-    new = last.append(pk_diff).drop_duplicates(subset=['pk'],keep=False)
-    old = first.append(pk_diff).drop_duplicates(subset=['pk'],keep=False)
+    # 找被改過交期的資料
+    new = last.append(pk_diff).drop_duplicates(subset=['pk'],keep=False) # 今天所有被更改過交期的資料
+    old = first.append(pk_diff).drop_duplicates(subset=['pk'],keep=False) # 昨天所有被更改過交期的資料
 
+    # 最後要寄給業務的通知內容
     final = new.merge(old,on = ['pk','OEB01','OEB03','OEB15','OEA02','OEA14'], suffixes=('_new','_old') )
     final = final[['OEA14','OEA02','OEB01','OEB03','OEB15','OEB16_old','OEB16_new']]
     final.sort_values('OEA14')
@@ -34,24 +42,22 @@ def data_process(df, df1):
 
     #dataframe轉html
     df_html = final.to_html(escape=False,index=False, justify = 'center')
-
-    if old.equals(new):
-        return 0, df_html
-    else:
-        return 1, df_html
+    
+    # 回傳final的html格式
+    return df_html
 
 def read_file(file):
     with open(file,'r',encoding="utf-8") as f:
             content_list = f.read().split('\n')
     return content_list
 
-def SendMail(df_html):
+def SendMail(msg_html):
     #print('start to send mail...')
     emails = read_file('email.txt') #讀email資料
     sender = emails[0] #step1:setup sender gmail,ex:"Fene1977@superrito.com"
     password = emails[1] #step2:setup sender gmail password
     recipients = emails[2] #step3:setup recipients mail
-    today_date = datetime.date.today()
+    today_date = datetime.date.today() 
     sub = today_date.strftime("%m/%d") + "訂單交期更改通知" #step4:setup your subject
     
     outer = MIMEMultipart()
@@ -66,7 +72,7 @@ def SendMail(df_html):
     outer.attach(msgText)
     
     #設定HTML資訊
-    htmlText = df_html #step7:edit your mail content
+    htmlText = msg_html #step7:edit your mail content
     msgText = MIMEText(htmlText, 'html', 'utf-8')
     outer.attach(msgText)
 
@@ -88,9 +94,10 @@ def SendMail(df_html):
 def main():
     yesterday = load_data('訂單test.xlsx')
     today = load_data('訂單test1.xlsx')
-    flag, mail_content = data_process(yesterday, today)
+    
+    mail_content = data_process(yesterday, today)
 
-    if flag == 0:
+    if mail_content == None:
         print("交期未更改")
     else:
         SendMail(mail_content)
