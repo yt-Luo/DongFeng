@@ -5,6 +5,7 @@ import pandas as pd
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText #專門傳送正文
 import smtplib
+import sys
 import datetime
 
 #讀excel
