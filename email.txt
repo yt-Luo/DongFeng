@@ -1,6 +1,6 @@
-hl94vul3h6@gmail.com
-eeecnzvlhavhksyb
-ytluo693@gmail.com
+sender@gmail.com
+senderPassword
+receiver@gmail.com
 ----使用說明--------------------------------------------------------
 在第1行輸入寄件人Gmail帳號
 在第2行輸入寄件人Gmail密碼
