@@ -7,6 +7,8 @@ from email.mime.text import MIMEText #專門傳送正文
 import smtplib
 import sys
 import datetime
+import os
+import shutil
 
 #讀excel
 def load_data(file_name, sheet_num=0):
@@ -92,9 +94,27 @@ def SendMail(msg_html):
         print("Unable to send the email. Error: ", sys.exc_info()[0])
         raise
         
+
+def remove_file(file_name):
+    try:
+        os.remove(file_name)
+    except OSError as e:
+        print(e)
+    else:
+        print("File is deleted successfully")
+
+# copy file1 as file2
+def copy_file(file1, file2):
+    try:
+        shutil.copyfile(file1, file2)
+        print("Copy %s as %s successfully"%(file1, file2))
+    except OSError as err:
+        print(err)
+
 def main():
-    yesterday = load_data('訂單test.xlsx')
-    today = load_data('訂單test1.xlsx')
+    fileNames = read_file('fileName.txt') #讀fileName資料
+    yesterday = load_data(fileNames[0])
+    today = load_data(fileNames[1])
     
     mail_content = data_process(yesterday, today)
 
@@ -103,5 +123,8 @@ def main():
     else:
         SendMail(mail_content)
         print("交期已被更改")
+    
+    copy_file(fileNames[1], fileNames[0])
+    remove_file(fileNames[1])
 
 main()
