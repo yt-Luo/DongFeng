@@ -57,17 +57,17 @@ def read_file(file):
 def SendMail(msg_html):
     #print('start to send mail...')
     emails = read_file('email.txt') #讀email資料
-    sender = emails[0] #step1:setup sender gmail,ex:"Fene1977@superrito.com"
-    password = emails[1] #step2:setup sender gmail password
-    recipients = emails[2] #step3:setup recipients mail
+    sender = emails[0] #setup sender gmail,ex:"Fene1977@superrito.com"
+    password = emails[1] #setup sender gmail password
+    recipients = emails[2] #setup recipients mail
     today_date = datetime.date.today() 
     sub = today_date.strftime("%m/%d") + "訂單交期更改通知" #step4:setup your subject
     
     outer = MIMEMultipart()
-    outer['From'] = sender #step:setup sender gmail
-    outer['To'] = recipients #step:setup recipient mail
-    #outer["Cc"] = cc_mail #step:setup cc mail
-    outer['Subject'] = sub #step:setup your subject
+    outer['From'] = sender #setup sender gmail
+    outer['To'] = recipients #setup recipient mail
+    #outer["Cc"] = cc_mail #setup cc mail
+    outer['Subject'] = sub #setup your subject
 
     #設定純文字資訊
     plainText = "偵測到訂單排定交貨日更改，請確認以下訂單："
@@ -101,30 +101,34 @@ def remove_file(file_name):
     except OSError as e:
         print(e)
     else:
-        print("File is deleted successfully")
+        print("Delete %s successfully."%(file_name))
 
 # copy file1 as file2
 def copy_file(file1, file2):
     try:
         shutil.copyfile(file1, file2)
-        print("Copy %s as %s successfully"%(file1, file2))
+        print("Copy %s as %s successfully."%(file1, file2))
     except OSError as err:
         print(err)
 
 def main():
-    fileNames = read_file('fileName.txt') #讀fileName資料
+    fileNames = read_file('fileName.txt') #取得欲分析之檔案名稱
     yesterday = load_data(fileNames[0])
     today = load_data(fileNames[1])
     
+    # 取得資料處理回傳結果
     mail_content = data_process(yesterday, today)
-
+    # 當回傳結果為None時，表交期未修改；有回傳內容則以email寄出回傳內容
     if mail_content == None:
         print("交期未更改")
     else:
         SendMail(mail_content)
         print("交期已被更改")
+
     
-    copy_file(fileNames[1], fileNames[0])
-    remove_file(fileNames[1])
+    copy_file(fileNames[1], fileNames[0]) # 將今天的檔案轉換為下次分析時昨天的檔案
+    remove_file(fileNames[1]) #刪除今天的檔案
+
+    input("請按任意鍵結束...") # 讓視窗停留，不要馬上關閉
 
 main()
