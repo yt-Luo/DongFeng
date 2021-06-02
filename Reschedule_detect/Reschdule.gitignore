@@ -1,0 +1,4 @@
+# Reschdule.gitignore
+
+# 忽略所有附檔名是.xlsx的檔案
+*.xlsx
