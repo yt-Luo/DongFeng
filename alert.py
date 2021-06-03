@@ -12,10 +12,15 @@ import shutil
 
 #讀excel
 def load_data(file_name, sheet_num=0):
-    df_orderData = pd.read_excel(file_name, sheet_name = sheet_num)
-    df_data = pd.DataFrame(df_orderData,columns=['OEB01','OEB03','OEB15','OEB16','OEA02','OEA14'])
-    df_data["pk"] = df_data["OEB01"] + "_" + df_data["OEB03"].map(str) # pk(不能重複) = 訂單編號 + 項次
-    return df_data
+    try:
+        df_orderData = pd.read_excel(file_name, sheet_name = sheet_num)
+        df_data = pd.DataFrame(df_orderData,columns=['OEB01','OEB03','OEB15','OEB16','OEA02','OEA14'])
+        df_data["pk"] = df_data["OEB01"] + "_" + df_data["OEB03"].map(str) # pk(不能重複) = 訂單編號 + 項次
+        return df_data
+    except Exception as e:
+        print(e)
+
+    
 
 # 資料處理
 def data_process(df, df1):
@@ -50,9 +55,15 @@ def data_process(df, df1):
     return df_html
 
 def read_file(file):
-    with open(file,'r',encoding="utf-8") as f:
+    try:
+        with open(file,'r',encoding="utf-8") as f:
             content_list = f.read().split('\n')
-    return content_list
+        return content_list
+    except OSError as err:
+        print("OS error: {0}".format(err))
+    except:
+        print("Unexpected error:", sys.exc_info()[0])
+        raise
 
 def SendMail(msg_html):
     #print('start to send mail...')
@@ -112,6 +123,7 @@ def copy_file(file1, file2):
         print(err)
 
 def main():
+    
     fileNames = read_file('fileName.txt') #取得欲分析之檔案名稱
     yesterday = load_data(fileNames[0])
     today = load_data(fileNames[1])
