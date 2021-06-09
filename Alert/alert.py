@@ -73,13 +73,13 @@ def SendMail(msg_html):
     emails = read_file('email.txt') #讀email資料
     sender = emails[0] #setup sender gmail,ex:"Fene1977@superrito.com"
     password = emails[1] #setup sender gmail password
-    recipients = emails[2] #setup recipients mail
+    recipients = emails[2].split(', ') #setup recipients mail
     today_date = datetime.date.today() 
     sub = today_date.strftime("%m/%d") + "訂單交期更改通知" #step4:setup your subject
     
     outer = MIMEMultipart()
     outer['From'] = sender #setup sender gmail
-    outer['To'] = recipients #setup recipient mail
+    outer['To'] = ','.join(recipients) #setup recipient mail
     #outer["Cc"] = cc_mail #setup cc mail
     outer['Subject'] = sub #setup your subject
 
