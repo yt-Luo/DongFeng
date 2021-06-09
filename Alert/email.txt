@@ -1,6 +1,6 @@
 sender@gmail.com
 senderPassword
-receiver@gmail.com
+receiver@gmail.com, receiver1@gmail.com
 ----使用說明--------------------------------------------------------
 在第1行輸入寄件人Gmail帳號
 在第2行輸入寄件人Gmail之應用程式密碼(非信箱原始密碼，需開啟兩步驟驗證後另外取得)

@@ -9,16 +9,19 @@ import sys
 import datetime
 import os
 import shutil
+import warnings
 
 #讀excel
 def load_data(file_name, sheet_num=0):
-    try:
-        df_orderData = pd.read_excel(file_name, sheet_name = sheet_num)
-        df_data = pd.DataFrame(df_orderData,columns=['OEB01','OEB03','OEB15','OEB16','OEA02','OEA14'])
-        df_data["pk"] = df_data["OEB01"] + "_" + df_data["OEB03"].map(str) # pk(不能重複) = 訂單編號 + 項次
-        return df_data
-    except Exception as e:
-        print(e)
+    with warnings.catch_warnings(record=True):  #消除warning
+        warnings.simplefilter("always")
+        try:
+            df_orderData = pd.read_excel(file_name, sheet_name = sheet_num, engine="openpyxl")
+            df_data = pd.DataFrame(df_orderData,columns=['OEB01','OEB03','OEB15','OEB16','OEA02','OEA14'])
+            df_data["pk"] = df_data["OEB01"] + "_" + df_data["OEB03"].map(str) # pk(不能重複) = 訂單編號 + 項次
+            return df_data
+        except Exception as e:
+            print(e)
 
     
 
