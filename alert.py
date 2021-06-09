@@ -9,16 +9,19 @@ import sys
 import datetime
 import os
 import shutil
+import warnings
 
 #讀excel
 def load_data(file_name, sheet_num=0):
-    try:
-        df_orderData = pd.read_excel(file_name, sheet_name = sheet_num)
-        df_data = pd.DataFrame(df_orderData,columns=['OEB01','OEB03','OEB15','OEB16','OEA02','OEA14'])
-        df_data["pk"] = df_data["OEB01"] + "_" + df_data["OEB03"].map(str) # pk(不能重複) = 訂單編號 + 項次
-        return df_data
-    except Exception as e:
-        print(e)
+    with warnings.catch_warnings(record=True):  #消除warning
+        warnings.simplefilter("always")
+        try:
+            df_orderData = pd.read_excel(file_name, sheet_name = sheet_num, engine="openpyxl")
+            df_data = pd.DataFrame(df_orderData,columns=['OEB01','OEB03','OEB15','OEB16','OEA02','OEA14'])
+            df_data["pk"] = df_data["OEB01"] + "_" + df_data["OEB03"].map(str) # pk(不能重複) = 訂單編號 + 項次
+            return df_data
+        except Exception as e:
+            print(e)
 
     
 
@@ -70,13 +73,13 @@ def SendMail(msg_html):
     emails = read_file('email.txt') #讀email資料
     sender = emails[0] #setup sender gmail,ex:"Fene1977@superrito.com"
     password = emails[1] #setup sender gmail password
-    recipients = emails[2] #setup recipients mail
+    recipients = emails[2].split(', ') #setup recipients mail
     today_date = datetime.date.today() 
     sub = today_date.strftime("%m/%d") + "訂單交期更改通知" #step4:setup your subject
     
     outer = MIMEMultipart()
     outer['From'] = sender #setup sender gmail
-    outer['To'] = recipients #setup recipient mail
+    outer['To'] = ','.join(recipients) #setup recipient mail
     #outer["Cc"] = cc_mail #setup cc mail
     outer['Subject'] = sub #setup your subject
 
