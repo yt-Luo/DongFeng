@@ -48,12 +48,12 @@ def data_process(df, df1):
     # 最後要寄給業務的通知內容
     final = new.merge(old,on = ['pk','OEB01','OEB03','OEB15','OEA02','OEA14'], suffixes=('_new','_old') )
     final = final[['OEA14','OEA02','OEB01','OEB03','OEB15','OEB16_old','OEB16_new']]
-    final.sort_values('OEA14')
+    final.sort_values(['OEA14','OEB01'], inplace = True, ignore_index=True) # 依照業務編號、訂單日期做遞增排序    
     final.rename(columns={'OEA02': '訂單日期', 'OEA14': '業務編號', 'OEB01': '訂單號碼', 'OEB03': '項次', 'OEB15': '約定交貨日', 'OEB16_old': '原排定交貨日', 'OEB16_new': '新排定交貨日'}, inplace=True)
-
-    #dataframe轉html
-    df_html = final.to_html(escape=False,index=False, justify = 'center')
+    final.index = final.index + 1 # index從1開始
     
+    #dataframe轉html
+    df_html = final.to_html(escape=False,index=True, justify = 'center')
     # 回傳final的html格式
     return df_html
 
@@ -126,20 +126,21 @@ def copy_file(file1, file2):
         print(err)
 
 def main():
-    
+   print('資料載入中...')
     fileNames = read_file('fileName.txt') #取得欲分析之檔案名稱
     yesterday = load_data(fileNames[0])
     today = load_data(fileNames[1])
     
+    print('資料處理中...')
     # 取得資料處理回傳結果
     mail_content = data_process(yesterday, today)
+    
     # 當回傳結果為None時，表交期未修改；有回傳內容則以email寄出回傳內容
     if mail_content == None:
         print("交期未更改")
     else:
         SendMail(mail_content)
         print("交期已被更改")
-
     
     copy_file(fileNames[1], fileNames[0]) # 將今天的檔案轉換為下次分析時昨天的檔案
     remove_file(fileNames[1]) #刪除今天的檔案
