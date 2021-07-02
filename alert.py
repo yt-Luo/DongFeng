@@ -10,20 +10,21 @@ import datetime
 import os
 import shutil
 import warnings
+from tqdm import tqdm
 
 #讀excel
 def load_data(file_name, sheet_num=0):
     with warnings.catch_warnings(record=True):  #消除warning
         warnings.simplefilter("always")
         try:
-            df_orderData = pd.read_excel(file_name, sheet_name = sheet_num, engine="openpyxl")
+            for i in tqdm(range(0,1), ncols = 100, desc = f"Loading {file_name} ..."):
+                df_orderData = pd.read_excel(file_name, sheet_name = sheet_num, engine="openpyxl")
             df_data = pd.DataFrame(df_orderData,columns=['OEB01','OEB03','OEB15','OEB16','OEA02','OEA14','TC_SFA104'])
             df_data["pk"] = df_data["OEB01"] + "_" + df_data["OEB03"].map(str) # pk(不能重複) = 訂單編號 + 項次
             return df_data
         except Exception as e:
             print(e)
 
-    
 
 # 資料處理
 def data_process(df, df1):
@@ -113,7 +114,6 @@ def SendMail(msg_html):
     except:
         print("Unable to send the email. Error: ", sys.exc_info()[0])
         raise
-        
 
 def remove_file(file_name):
     try:
@@ -132,14 +132,15 @@ def copy_file(file1, file2):
         print(err)
 
 def main():
-    print('資料載入中...')
+    #print('資料載入中...')
     fileNames = read_file('fileName.txt') #取得欲分析之檔案名稱
     yesterday = load_data(fileNames[0])
     today = load_data(fileNames[1])
     
-    print('資料處理中...')
+    #print('資料處理中...')
     # 取得資料處理回傳結果
-    mail_content = data_process(yesterday, today)
+    for i in tqdm(range(0,1), ncols = 100, desc ="Progressing data..."):
+        mail_content = data_process(yesterday, today)
     
     # 當回傳結果為None時，表示沒有符合條件的訂單；有回傳內容則以email寄出回傳內容
     if mail_content == None:
