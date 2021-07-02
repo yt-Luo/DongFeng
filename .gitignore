@@ -1,4 +1,7 @@
-# Reschdule.gitignore
+# python.gitignore
+
+# new
+.ipynb
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
@@ -75,7 +78,6 @@ target/
 
 # Jupyter Notebook
 .ipynb_checkpoints
-alert.ipynb
 
 # IPython
 profile_default/
