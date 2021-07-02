@@ -8,6 +8,7 @@ pandas = "*"
 xlrd = "*"
 openpyxl = "*"
 pyinstaller = "*"
+tqdm = "*"
 
 [dev-packages]
 
