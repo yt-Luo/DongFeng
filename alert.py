@@ -17,7 +17,7 @@ def load_data(file_name, sheet_num=0):
         warnings.simplefilter("always")
         try:
             df_orderData = pd.read_excel(file_name, sheet_name = sheet_num, engine="openpyxl")
-            df_data = pd.DataFrame(df_orderData,columns=['OEB01','OEB03','OEB15','OEB16','OEA02','OEA14'])
+            df_data = pd.DataFrame(df_orderData,columns=['OEB01','OEB03','OEB15','OEB16','OEA02','OEA14','TC_SFA104'])
             df_data["pk"] = df_data["OEB01"] + "_" + df_data["OEB03"].map(str) # pk(不能重複) = 訂單編號 + 項次
             return df_data
         except Exception as e:
@@ -36,20 +36,26 @@ def data_process(df, df1):
     last = all_diff.drop_duplicates(subset=['pk'],keep='last') # 含交期更改後的訂單，不含交期更改前的訂單
     first = all_diff.drop_duplicates(subset=['pk'],keep='first') # 含交期更改前的訂單，不含交期更改後的訂單
     pk_diff = all_diff.drop_duplicates(subset=['pk'],keep=False) # 不含交期被更改過的所有訂單
-    
-    # 當兩天的資料相等時，回傳None
-    if first.equals(last):
-        return None
 
     # 找被改過交期的資料
     new = last.append(pk_diff).drop_duplicates(subset=['pk'],keep=False) # 今天所有被更改過交期的資料
     old = first.append(pk_diff).drop_duplicates(subset=['pk'],keep=False) # 昨天所有被更改過交期的資料
 
+    # 合併兩天所有被更改過交期的資料
+    merged_data = new.merge(old,on = ['pk','OEB01','OEB03','OEB15','OEA02','OEA14'], suffixes=('_new','_old') )
+    # 預計完工日 = 預計下機日 + 10天
+    date_of_completion = merged_data['TC_SFA104_new'] + datetime.timedelta(days = 10)
+    # 找出可能來不及交貨的資料 (當預計完工日超過約定交貨日時)
+    delayed_data = merged_data[date_of_completion > merged_data['OEB15']]
+        
+    # 當沒有可能遲交的訂單時，回傳None
+    if delayed_data.empty == True:
+        return None
+
     # 最後要寄給業務的通知內容
-    final = new.merge(old,on = ['pk','OEB01','OEB03','OEB15','OEA02','OEA14'], suffixes=('_new','_old') )
-    final = final[['OEA14','OEA02','OEB01','OEB03','OEB15','OEB16_old','OEB16_new']]
-    final.sort_values(['OEA14','OEB01'], inplace = True, ignore_index=True) # 依照業務編號、訂單日期做遞增排序    
-    final.rename(columns={'OEA02': '訂單日期', 'OEA14': '業務編號', 'OEB01': '訂單號碼', 'OEB03': '項次', 'OEB15': '約定交貨日', 'OEB16_old': '原排定交貨日', 'OEB16_new': '新排定交貨日'}, inplace=True)
+    final = delayed_data.loc[:, ['OEA14','OEA02','OEB01','OEB03','OEB15','OEB16_old','OEB16_new', 'TC_SFA104_new']]
+    final.sort_values(['OEA14','OEB01'], inplace = True, ignore_index=True) # 依照業務編號、訂單編號做遞增排序
+    final.rename(columns={'OEA02': '訂單日期', 'OEA14': '業務編號', 'OEB01': '訂單號碼', 'OEB03': '項次', 'OEB15': '約定交貨日', 'OEB16_old': '原排定交貨日', 'OEB16_new': '新排定交貨日', 'TC_SFA104_new': '預計下機日'}, inplace=True)
     final.index = final.index + 1 # index從1開始
     
     #dataframe轉html
@@ -84,7 +90,7 @@ def SendMail(msg_html):
     outer['Subject'] = sub #setup your subject
 
     #設定純文字資訊
-    plainText = "偵測到訂單排定交貨日更改，請確認以下訂單："
+    plainText = "偵測到訂單排定交貨日更改，且預計下機日與約定交貨日差距小於10天，請確認以下訂單："
     msgText = MIMEText(plainText, 'plain', 'utf-8')
     outer.attach(msgText)
     
@@ -126,7 +132,7 @@ def copy_file(file1, file2):
         print(err)
 
 def main():
-   print('資料載入中...')
+    print('資料載入中...')
     fileNames = read_file('fileName.txt') #取得欲分析之檔案名稱
     yesterday = load_data(fileNames[0])
     today = load_data(fileNames[1])
@@ -135,12 +141,12 @@ def main():
     # 取得資料處理回傳結果
     mail_content = data_process(yesterday, today)
     
-    # 當回傳結果為None時，表交期未修改；有回傳內容則以email寄出回傳內容
+    # 當回傳結果為None時，表示沒有符合條件的訂單；有回傳內容則以email寄出回傳內容
     if mail_content == None:
-        print("交期未更改")
+        print("沒有符合條件的訂單")
     else:
-        SendMail(mail_content)
-        print("交期已被更改")
+        print("找到需要通知的訂單")
+        SendMail(mail_content)        
     
     copy_file(fileNames[1], fileNames[0]) # 將今天的檔案轉換為下次分析時昨天的檔案
     remove_file(fileNames[1]) #刪除今天的檔案
