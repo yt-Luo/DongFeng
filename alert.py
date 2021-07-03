@@ -28,28 +28,32 @@ def load_data(file_name, sheet_num=0):
 
 # 資料處理
 def data_process(df, df1):
-    # 找昨天跟今天所有不重複的資料(含交期更改前後pk相同的訂單)
+    # 可能被更改的欄位: OEB16、TC_SFA104
+    # 找昨天跟今天所有不重複的資料(含更改前後pk相同的訂單)
     tmp = df.append(df1)
     tmp.drop_duplicates(keep=False, inplace=True)
     all_diff =pd.DataFrame(tmp) 
 
     # 找昨天跟今天所有pk不重複的資料
-    last = all_diff.drop_duplicates(subset=['pk'],keep='last') # 含交期更改後的訂單，不含交期更改前的訂單
-    first = all_diff.drop_duplicates(subset=['pk'],keep='first') # 含交期更改前的訂單，不含交期更改後的訂單
-    pk_diff = all_diff.drop_duplicates(subset=['pk'],keep=False) # 不含交期被更改過的所有訂單
+    last = all_diff.drop_duplicates(subset=['pk'],keep='last') # 含更改後的訂單，不含更改前的訂單
+    first = all_diff.drop_duplicates(subset=['pk'],keep='first') # 含更改前的訂單，不含更改後的訂單
+    pk_diff = all_diff.drop_duplicates(subset=['pk'],keep=False) # 不含更改過的所有訂單
 
-    # 找被改過交期的資料
-    new = last.append(pk_diff).drop_duplicates(subset=['pk'],keep=False) # 今天所有被更改過交期的資料
-    old = first.append(pk_diff).drop_duplicates(subset=['pk'],keep=False) # 昨天所有被更改過交期的資料
+    # 找被更改過的資料
+    new = last.append(pk_diff).drop_duplicates(subset=['pk'],keep=False) # 今天所有被更改過的資料
+    old = first.append(pk_diff).drop_duplicates(subset=['pk'],keep=False) # 昨天所有被更改過的資料
 
-    # 合併兩天所有被更改過交期的資料
+    # 合併兩天所有被更改過的資料，並將兩天OEB16與TC_SFA104的數據分別列出
     merged_data = new.merge(old,on = ['pk','OEB01','OEB03','OEB15','OEA02','OEA14'], suffixes=('_new','_old') )
+    # 取出交期被更改的資料
+    changed_data = merged_data[merged_data['OEB16_new'] != merged_data['OEB16_old']].copy()
+    
     # 預計完工日 = 預計下機日 + 10天
-    date_of_completion = merged_data['TC_SFA104_new'] + datetime.timedelta(days = 10)
+    date_of_completion = changed_data['TC_SFA104_new'] + datetime.timedelta(days = 10)
     # 找出可能來不及交貨的資料 (當預計完工日超過約定交貨日時)
-    delayed_data = merged_data[date_of_completion > merged_data['OEB15']]
+    delayed_data = changed_data[date_of_completion > changed_data['OEB15']].copy()
         
-    # 當沒有可能遲交的訂單時，回傳None
+    # 當沒有符合條件的訂單時，回傳None
     if delayed_data.empty == True:
         return None
 
@@ -114,6 +118,7 @@ def SendMail(msg_html):
     except:
         print("Unable to send the email. Error: ", sys.exc_info()[0])
         raise
+        
 
 def remove_file(file_name):
     try:
